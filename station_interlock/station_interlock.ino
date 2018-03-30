@@ -4,7 +4,38 @@
    K3NG
    anthony.good@gmail.com
 
+   With design guidiance and testing by James Balls, M0CKE
 
+Description
+
+  A system to control multiple transmitters in a contest station so that only one will transmit at a time.
+
+
+Documentation 
+
+  Theory of operation
+
+
+    Multiple transmitters in operation at a contest station are connected to this controller.  When one goes into transmit, the transmitter
+    or operating position equipment takes its tx_request line active.  The tx_inhibit lines of the other transmitters are taken active by
+    the controller to prevent them from transmitting.
+
+    When FEATURE_UDP is activated, the controller will also send UDP transmitter state messages to DXLabs software.  Incoming UDP packets
+    are read but are not acted upon.
+
+  Configuration
+
+    FEATURE_WEB_SERVER - Activates, you guessed it, the web server.  IP address is set below (Search for "Ethernet IP address settings")
+
+    FEATURE_UDP - This activates UDP messaging to DXLabs software to convey transmitter / interlock state
+
+    Both FEATURE_WEB_SERVER and FEATURE_UDP naturally require an Arduino Ethernet shield.
+  
+
+History
+
+2018.03.30.01
+  New code version scheme, starting to write some documentation
 
 */
 #include <EEPROM.h>
@@ -12,10 +43,15 @@
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 
-#define CODE_VERSION "1.0.2016072602"
+#define CODE_VERSION "2018.03.30.01"
 
-#define FEATURE_WEB_SERVER
-#define FEATURE_UDP
+// Features - uncomment to compile in additional optional features
+
+// #define FEATURE_WEB_SERVER
+// #define FEATURE_UDP
+
+// Debug options below activate various log messages on the serial port.  Do not leave these compiled in for normal operation.
+
 // #define DEBUG_STATION_INTERLOCK
 // #define DEBUG_UDP
 // #define DEBUG_UDP_WRITE
@@ -57,18 +93,18 @@
 #define pin_output_tx_inhibit_16 37
 
 // settings
-#define NUMBER_OF_STATIONS 8
+#define NUMBER_OF_STATIONS 8                 // Number of station input and output ports to be activated
 #define INPUT_ACTIVE_DEFAULT LOW
 #define INPUT_INACTIVE_DEFAULT HIGH
 #define OUTPUT_ACTIVE_DEFAULT HIGH
 #define OUTPUT_INACTIVE_DEFAULT LOW
-#define UDP_LISTENER_PORT 8888
-#define UDP_DEFAULT_BROADCAST_PORT 1234
-#define EEPROM_MAGIC_NUMBER 13           // change this to force EEPROM initialization
-#define MAX_STATIONS 16
+#define UDP_LISTENER_PORT 8888               // UDP listener port to receive broadcast DXLabs messages              
+#define UDP_DEFAULT_BROADCAST_PORT 1234      // UDP source port for DXLabs broadcast messages
+#define EEPROM_MAGIC_NUMBER 13               // change this number to force EEPROM initialization (must be 0 to 255)
+#define MAX_STATIONS 16                      // don't touch this
 
 
-#define MSG_BRQ 1
+#define MSG_BRQ 1    // DXLabs UDP message types (don't change this)
 #define MSG_BOK 2
 #define MSG_BNA 3
 #define MSG_BUN 4
@@ -107,6 +143,9 @@ unsigned long last_config_write = 0;
   #define DEBUG_SERIAL_PORT &Serial
   #define DEBUG_SERIAL_PORT_BAUD_RATE 115200
 #endif //DEBUG_STATION_INTERLOCK
+
+
+// Ethernet IP address settings
 
 uint8_t default_ip[] = {192,168,1,178};                      // default IP address ("192.168.1.178")
 uint8_t default_gateway[] = {192,168,1,1};                   // default gateway
